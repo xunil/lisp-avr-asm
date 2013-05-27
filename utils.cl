@@ -28,3 +28,29 @@
 	(format t " ")
 	(incf travel)))))
 
+;;;; Recursive word split solution
+;;;; defun recursive-word-split ...
+;;;; if (string doesn't contain any delimiters)
+;;;;    return (list string)
+;;;; else
+;;;;    word <- subseq ...
+;;;;    return (list word (recursive-word-split ...parameters...))
+(defun recursive-word-split (str &key (delims " ") keep-delims)
+  (let* ((all-delims (concatenate 'string delims keep-delims))
+	 (next-delim (next-delimiter str all-delims))
+	 (next-delim-pos (position next-delim str)))
+    (cond
+      ((null next-delim) str)
+      (t (list (subseq str 0 next-delim-pos)
+	       (recursive-word-split
+		(subseq str (1+ next-delim-pos))
+		:delims delims
+		:keep-delims keep-delims))))))
+
+(defun next-delimiter (str delims)
+  (do ((i 0 (1+ i))
+       (found nil))
+      ((or (>= i (length delims)) found)
+       (return (if found (char delims (1- i)) nil)))
+    (let ((c (char delims i)))
+      (setf found (not (null (position c str)))))))
