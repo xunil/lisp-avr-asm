@@ -28,29 +28,24 @@
 	(format t " ")
 	(incf travel)))))
 
-;;;; Recursive word split solution
-;;;; defun recursive-word-split ...
-;;;; if (string doesn't contain any delimiters)
-;;;;    return (list string)
-;;;; else
-;;;;    word <- subseq ...
-;;;;    return (list word (recursive-word-split ...parameters...))
-(defun recursive-word-split (str &key (delims " ") keep-delims)
+(defun recursive-word-split (str &key (delims " ") keep-delims keep-blanks)
   (let* ((all-delims (concatenate 'string delims keep-delims))
-	 (next-delim (next-delimiter str all-delims))
-	 (next-delim-pos (position next-delim str)))
+	 (next-non-delim-pos (next-non-delimiter-pos str all-delims))
+	 (next-delim-pos (next-delimiter-pos str all-delims :start next-non-delim-pos)))
     (cond
-      ((null next-delim) str)
-      (t (list (subseq str 0 next-delim-pos)
-	       (recursive-word-split
-		(subseq str (1+ next-delim-pos))
+      ((null next-delim-pos) (cons (subseq str next-non-delim-pos) nil))
+      (t (cons (subseq str next-non-delim-pos next-delim-pos)
+	       (x-recursive-word-split
+		(subseq str next-delim-pos)
 		:delims delims
 		:keep-delims keep-delims))))))
 
-(defun next-delimiter (str delims)
-  (do ((i 0 (1+ i))
-       (found nil))
-      ((or (>= i (length delims)) found)
-       (return (if found (char delims (1- i)) nil)))
-    (let ((c (char delims i)))
-      (setf found (not (null (position c str)))))))
+(defun next-delimiter (str delims &key (start 0))
+  (let ((ndp (next-delimiter-pos str delims :start start)))
+    (subseq str ndp (1+ ndp))))
+
+(defun next-non-delimiter-pos (str delims &key (start 0))
+  (position-if-not (lambda (c) (position c delims)) str :start start))
+
+(defun next-delimiter-pos (str delims &key (start 0))
+  (position-if (lambda (c) (position c delims)) str :start start))
