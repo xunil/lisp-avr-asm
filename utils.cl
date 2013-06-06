@@ -49,18 +49,20 @@
 
 
 (defvar *whitespace* (list #\Space #\Tab))
-(defvar *operators* (list #\( #\) #\/ #\* #\+ #\- #\< #\> #\^ #\& #\|))
+(defvar *operators* (list #\( #\) #\/ #\* #\+ #\- #\< #\> #\^ #\& #\| #\,))
 (defun whitespacep (c) (find c *whitespace*))
 (defun operatorp (c) (find c *operators*))
 (defun except-char-class-p (pred) (remove pred (list #'whitespacep #'operatorp #'alphanumericp)))
-(defun not-in-char-classes (pred-list)
   
 (defun char-class (c)
   (cond
     ((whitespacep c) #'whitespacep)
     ((operatorp c) #'operatorp)
-    ((alphanumericp c) #'alphanumericp)
-    (t nil)))
+    ((alphanumericp c) #'alphanumericp)))
+
+(defun position-if-any-except (pred str &key (start 0))
+  (min (position-if (first (remove pred (list #'whitespacep #'operatorp #'alphanumericp))) str :start start)
+       (position-if (second (remove pred (list #'whitespacep #'operatorp #'alphanumericp))) str :start start)))
 
 (defun tokenize-string (str)
   (do* ((char-class-p #'whitespacep (char-class (elt str end)))
