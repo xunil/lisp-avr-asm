@@ -1,19 +1,3 @@
-(defun split-multi-delims (str &key (delims " ") keep-delims)
-  (do ((result (make-array 1 :fill-pointer 0 :adjustable t))
-       (pos 0 (1+ pos))
-       (word-start 0))
-      ((> pos (length str))
-       result)
-    (if (= pos (length str))
-	(vector-push-extend (subseq str word-start pos) result)
-	(let ((c (elt str pos)))
-	  (when (or (position c delims) (position c keep-delims))
-	    (unless (= word-start pos)
-	      (vector-push-extend (subseq str word-start pos) result)
-	      (when (position c keep-delims)
-		(vector-push-extend (subseq str pos (1+ pos)) result)
-		(setf word-start (1+ pos)))))))))
-
 (defun hex-print (data &optional (width 40))
   (do ((pos 0 (incf pos))
        (travel 0))
@@ -28,37 +12,28 @@
 	(format t " ")
 	(incf travel)))))
 
-(defun recursive-word-split (str &key (delims " ") keep-delims)
-  (print str)
-  (let* ((all-delims (concatenate 'string delims keep-delims))
-	 (next-non-delim-pos (next-non-delimiter-pos str all-delims))
-	 (next-delim-pos (next-delimiter-pos str all-delims :start next-non-delim-pos)))
+(defun new-hex-print (data &optional (width 40))
+  (do ((step-size (round (/ width 3)))
+       (step 0 (incf step))
+       (start 0 (* step-size step)))
+      ((> start (length data)))
+    (let*
+	((len (length data))
+	 (end (min (+ start step-size) len))
+	 (seq (subseq data start (min end (length data)))))
+      (format t "~{~2,'0X~^ ~}~&" (map 'sequence #'char-int seq)))))
+
+
+    
+(defun split-string (str &key (delims " "))
+  (let* ((next-non-delim-pos (next-non-delimiter-pos str delims))
+	 (next-delim-pos (next-delimiter-pos str delims :start next-non-delim-pos)))
     (cond
       ((null next-delim-pos) (cons (subseq str next-non-delim-pos) nil)) ; Last word? End the list
-      (t (cond                                                           ; Not the last word, but it might be a delimiter we want to keep
-	   (keep-delims (cons
-			 (subseq str next-non-delim-pos next-delim-pos)
-			 (cons
-			  (next-delimiter str keep-delims :start next-delim-pos)
-			  (recursive-word-split (subseq str next-delim-pos) :delims delims :keep-delims keep-delims))))
-	   (t (cons (subseq str next-non-delim-pos next-delim-pos)
+      (t (cons (subseq str next-non-delim-pos next-delim-pos)
 		    (recursive-word-split
 		     (subseq str next-delim-pos)
-		     :delims delims
-		     :keep-delims keep-delims))))))))
-
-(defun x-recursive-word-split (str &key (delims " ") keep-delims)
-  (print str)
-  (let* ((all-delims (concatenate 'string delims keep-delims))
-	 (next-non-delim-pos (next-non-delimiter-pos str all-delims))
-	 (next-delim-pos (next-delimiter-pos str all-delims :start next-non-delim-pos)))
-    (cond
-      ((null next-delim-pos) (cons (subseq str next-non-delim-pos) nil))
-      (t (let ((word (subseq str next-non-delim-pos next-delim-pos)))
-	   (cond
-	     ((and keep-delims (next-non-delimiter-pos str delims)) (cons word (cons (next-delimiter str keep-delims)
-					   (x-recursive-word-split (subseq str next-delim-pos) :delims delims :keep-delims keep-delims))))
-	     (t (cons word (x-recursive-word-split (subseq str next-delim-pos) :delims delims :keep-delims keep-delims)))))))))
+		     :delims delims))))))
 
 (defun next-delimiter (str delims &key (start 0))
   (let ((ndp (next-delimiter-pos str delims :start start)))
@@ -71,3 +46,26 @@
 
 (defun next-delimiter-pos (str delims &key (start 0))
   (position-if (lambda (c) (position c delims)) str :start start))
+
+
+(defvar *whitespace* (list #\Space #\Tab))
+(defvar *operators* (list #\( #\) #\/ #\* #\+ #\- #\< #\> #\^ #\& #\|))
+(defun whitespacep (c) (find c *whitespace*))
+(defun operatorp (c) (find c *operators*))
+(defun except-char-class-p (pred) (remove pred (list #'whitespacep #'operatorp #'alphanumericp)))
+(defun not-in-char-classes (pred-list)
+  
+(defun char-class (c)
+  (cond
+    ((whitespacep c) #'whitespacep)
+    ((operatorp c) #'operatorp)
+    ((alphanumericp c) #'alphanumericp)
+    (t nil)))
+
+(defun tokenize-string (str)
+  (do* ((char-class-p #'whitespacep (char-class (elt str end)))
+	(len (length str))
+	(start (position-if-not char-class-p str) (position-if-not char-class-p str :start end))
+	(end (position-if-not #'(lambda (c) (not (funcall char-class-p c))) str :start start) (position-if-not #'(lambda (c) (not (funcall char-class-p c))) str :start start)))
+       ((or (null start) (null end) (> start len) (> end len)))
+    (format t "~&start=~d end=~d subseq=~a" start end (subseq str start end))))
